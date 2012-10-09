@@ -43,6 +43,7 @@ public:
 	StringVector  cmplx_preproc_list;		//!< Preprocessor directives (complexity)
 	StringVector  cmplx_assign_list;		//!< Assignments (complexity)
 	StringVector  cmplx_pointer_list;		//!< Pointers (complexity)
+	StringVector  cmplx_cyclomatic_list;	//!< Cyclomatic complexity decision keywords
 
 	UIntPairVector directive_count;			//!< Count of each directive statement keyword
 	UIntPairVector data_name_count;			//!< Count of each data statement keyword
@@ -59,6 +60,7 @@ public:
 	UIntPairVector cmplx_pointer_count;		//!< Count of pointers
 
 	bool          isPrintKeyword;			//!< Print keywords to output?
+	bool          isPrintCyclomatic;		//!< Print cyclomatic complexity?
 	string        language_name;			//!< Counter language name
 	int			  classtype;				//!< Language class type
 	unsigned int  counted_files;			//!< Number of files counted
@@ -80,7 +82,8 @@ protected:
 	virtual int CountComplexity(filemap* fmap, results* result);
 	virtual int CountDirectiveSLOC(filemap* fmap, results* result, filemap* fmapBak = NULL) { return 0; }
 	virtual int LanguageSpecificProcess(filemap* fmap, results* result, filemap* fmapBak = NULL);
-
+	virtual int ParseFunctionName(string line, string &lastline, stack<string> &functionStack, string &functionName);
+	
 	StringVector  exclude_keywords;			//!< List of keywords to exclude from counts
 
 	// if language supports multiple quote marks such as javascript, you can put all of them here, ex. "\"'"

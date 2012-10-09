@@ -15,6 +15,8 @@ CCsharpCounter::CCsharpCounter()
 	classtype = CSHARP;
 	language_name = "C#";
 
+	isVerbatim = false;
+
 	file_extension.push_back(".cs");
 
 	directive.push_back("#define");
@@ -195,16 +197,23 @@ int CCsharpCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd
 		idx_start = 0;
 		if (strline[0] == CurrentQuoteEnd)
 		{
-			idx_start = 1;
-			contd = false;
-			return 1;
+			if (!isVerbatim || (strline.length() < 2) || (strline[1] != '"'))
+			{
+				idx_start = 1;
+				contd = false;
+				return 1;
+			}
 		}
-		strline[0] = '$';
+		else
+			strline[0] = '$';
 	}
 	else
 	{
 		// accommodate C# verbatim string (e.g. @"\")
+		isVerbatim = false;
 		idx_verbatim = strline.find_first_of("@");
+		if (idx_verbatim != string::npos && idx_verbatim + 1 == idx_start)
+			isVerbatim = true;
 
 		// handle two quote chars in some languages, both " and ' may be accepted
 		idx_start = FindQuote(strline, QuoteStart, idx_start, QuoteEscapeFront);
@@ -221,7 +230,7 @@ int CCsharpCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd
 	}
 
 	// accommodate C# verbatim string (e.g. @"\")
-	if (idx_verbatim != string::npos && idx_verbatim+1 == idx_start) // verbatim string
+	if (isVerbatim)	// verbatim string
 		idx_end = CUtil::FindCharAvoidEscape(strline, CurrentQuoteEnd, idx_start + 1, noQuoteEscapeFront);
 	else
 		idx_end = CUtil::FindCharAvoidEscape(strline, CurrentQuoteEnd, idx_start + 1, QuoteEscapeFront);
@@ -234,17 +243,19 @@ int CCsharpCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd
 	}
 	else
 	{
-		if ((QuoteEscapeRear) && (strline.length() > idx_end + 1) && (strline[idx_end+1] == QuoteEscapeRear))
+		if ((isVerbatim && (strline.length() > idx_end + 1) && (strline[idx_end+1] == '"')) ||
+			((QuoteEscapeRear) && (strline.length() > idx_end + 1) && (strline[idx_end+1] == QuoteEscapeRear)))
 		{
 			strline[idx_end] = '$';
 			strline[idx_end+1] = '$';
 		}
 		else
 		{
+			isVerbatim = false;
 			contd = false;
 			strline.replace(idx_start + 1, idx_end - idx_start - 1, idx_end - idx_start - 1, '$');
+			idx_start = idx_end + 1;
 		}
-		idx_start = idx_end + 1;
 	}
 	return 1;
 }

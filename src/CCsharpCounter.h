@@ -23,6 +23,9 @@ public:
 
 protected:
 	virtual int ReplaceQuote(string &strline, size_t &idx_start, bool &contd, char &CurrentQuoteEnd);
+
+private:
+	bool isVerbatim;
 };
 
 //! C# in HTML code counter class.

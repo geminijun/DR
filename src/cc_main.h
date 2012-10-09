@@ -19,7 +19,7 @@
 #include <algorithm>
 using namespace std;
 
-#define PRODUCT_REVISION "2011.10B"
+#define PRODUCT_REVISION "2011.10"
 
 #define PHY		0
 #define LOG		1
@@ -89,6 +89,8 @@ using namespace std;
 #define OUTPUT_FILE_CPLX_CSV  "outfile_cplx.csv"
 #define OUTPUT_FILE_SUM	      "outfile_summary.txt"
 #define OUTPUT_FILE_SUM_CSV   "outfile_summary.csv"
+#define OUTPUT_FILE_CYC_CPLX  "outfile_cyclomatic_cplx.txt"
+#define OUTPUT_FILE_CYC_CPLX_CSV  "outfile_cyclomatic_cplx.csv"
 #define LOG_FILENAME		  "log.txt"
 
 ///////////////////////////////////////////////////////
@@ -233,6 +235,7 @@ public:
 	UIntVector cmplx_assign_count;		//!< Count of assignments
 	UIntVector cmplx_pointer_count;		//!< Count of pointers
 	UIntVector cmplx_nestloop_count;	//!< Count of nested loop levels
+	srcLineVector cmplx_cycfunct_count;	//!< Cyclomatic complexity by function
 
 	// differencing
 	bool firstDuplicate;				//!< Is this file the first (source) duplicate? (printed in main counting file)

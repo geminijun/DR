@@ -17,17 +17,19 @@ MainObject::MainObject()
 {
 	counter = 0;
 
-	isDiff = false;				// default not differencing files
-	outDir = "";				// default output directory is current directory
-	duplicate_threshold = 0;	// default duplicate files threshold
-	lsloc_truncate = 10000;		// default LSLOC maximum characters for truncation (0=no truncation)
-	print_cmplx = true;			// default print complexity and keyword counts
-	print_csv = true;			// default print CSV report files
-	print_ascii = false;		// default don't print ASCII text report files
-	print_legacy = false;		// default don't print legacy ASCII text report files
-	print_unified = false;		// default don't print all counting files to a single unified file
-	clearCaseFile = false;		// default don't process Clear Case file names
-	use_CommandLine = false;	// default read all files from fileList file
+	isDiff = false;					// default not differencing files
+	outDir = "";					// default output directory is current directory
+	duplicate_threshold = 0;		// default duplicate files threshold
+	lsloc_truncate = 10000;			// default LSLOC maximum characters for truncation (0=no truncation)
+	print_cmplx = true;				// default print complexity and keyword counts
+	print_cyclomatic_cmplx = false;	// default don't print cyclomatic complexity
+	print_csv = true;				// default print CSV report files
+	print_ascii = false;			// default don't print ASCII text report files
+	print_legacy = false;			// default don't print legacy ASCII text report files
+	print_unified = false;			// default don't print all counting files to a single unified file
+	clearCaseFile = false;			// default don't process Clear Case file names
+	followSymLinks = true;			// default follow symbolic links
+	use_CommandLine = false;		// default read all files from fileList file
 
 	CCodeCounter* tmp;
 
@@ -410,7 +412,7 @@ int MainObject::MainProcess(int argc, char *argv[])
 
 	// read the source files
 	if (listFilesToBeSearched.size() != 0)
-		CUtil::ListAllFiles(dirnameA, listFilesToBeSearched, listFileNames);
+		CUtil::ListAllFiles(dirnameA, listFilesToBeSearched, listFileNames, followSymLinks);
 	
 	cout << "Reading source files..."; 
 	if (!ReadAllFiles(listFileNames, BaselineFileName1))
@@ -719,6 +721,17 @@ int MainObject::ParseCommandLine(int argc, char *argv[])
 		{
 			print_cmplx = false;
 		}
+		else if (arg == "-cyclomatic")
+		{
+			print_cyclomatic_cmplx = true;
+		}
+#ifdef UNIX
+		else if (arg == "-nolinks")
+		{
+			// disable following symbolic links
+			followSymLinks = false;
+		}
+#endif
 		else
 			return 0;
 	}
@@ -874,6 +887,20 @@ void MainObject::ShowUsage(const string &option, bool do_exit)
 		cout << " -nocomplex: Disables printing of keyword counts and processing of complexity" << endl;
 		cout << "             metrics. This can reduce processing time and limit reports." << endl;
 	}
+	else if (option == "-cyclomatic")
+	{
+		cout << "Usage: ucc -cyclomatic" << endl << endl;
+		cout << " -cyclomatic: Enables printing of cyclomatic complexity metrics when available." << endl;
+		cout << "              This is overridden by -nocomplex." << endl;
+	}
+#ifdef UNIX
+	else if (option == "-nolinks")
+	{
+		cout << "Usage: ucc -nolinks" << endl << endl;
+		cout << " -nolinks: Disables following symbolic links to directories and counting" << endl;
+		cout << "           of links to files on Unix systems. This can prevent duplicate file counts." << endl;
+	}
+#endif
 	else if (option == "-h" || option == "-help")
 	{
 		cout << "Usage: ucc -help <option>" << endl << endl;
@@ -886,7 +913,11 @@ void MainObject::ShowUsage(const string &option, bool do_exit)
 		cout << "Usage: ucc [-v] [-d [-i1 fileListA] [-i2 <fileListB>] [-t <#>]] [-tdup <#>]" << endl;
 		cout << "           [-trunc <#>] [-cf] [-dir <dirA> [<dirB>] <fileSpecs>]" << endl;
 		cout << "           [-outdir <outDir>] [-extfile <extFile>] [-unified] [-ascii] [-legacy]" << endl;
-		cout << "           [-nodup] [-nocomplex] [-help [<option>]]" << endl << endl;
+#ifdef UNIX
+		cout << "           [-nodup] [-nocomplex] [-cyclomatic] [-nolinks] [-help [<option>]]" << endl << endl;
+#else
+		cout << "           [-nodup] [-nocomplex] [-cyclomatic] [-help [<option>]]" << endl << endl;
+#endif
 		cout << "Options:" << endl;
 		cout << " -v                 Lists the current version number." << endl;
 		cout << " -d                 Runs the differencing function." << endl;
@@ -918,6 +949,10 @@ void MainObject::ShowUsage(const string &option, bool do_exit)
 		cout << "                      instead of the current format of the CSV or text files." << endl;
 		cout << " -nodup             Disables separate processing of duplicate files." << endl;
 		cout << " -nocomplex         Disables printing complexity reports or keyword counts." << endl;
+		cout << " -cyclomatic        Enables printing cyclomatic complexity report." << endl;
+#ifdef UNIX
+		cout << " -nolinks           Disables following symbolic links to directories and files." << endl;
+#endif
 		cout << " -help <option>     Displays this usage or usage for a specified option." << endl;
 	}
 	if (do_exit)
@@ -966,7 +1001,7 @@ void MainObject::ReadUserExtMapping(const string &extMapFile)
 	string token;
 	size_t pos1, pos2;
 	bool foundc = false;
-	readFile.open(extMapFile.c_str(), ios::in);
+	readFile.open(extMapFile.c_str(), ifstream::in);
 	if (readFile.is_open())
 	{
 		while (readFile.good())
@@ -1091,6 +1126,8 @@ void MainObject::CreateExtMap()
 					webExten = &(webCounter->file_exten_php);
 				else if (lang_name == "coldfusion")
 					webExten = &(webCounter->file_exten_cfm);
+				else if (lang_name == "xml")
+					webExten = &(webCounter->file_exten_xml);
 				else
 					webExten = &(webCounter->file_exten_htm);
 
@@ -1150,12 +1187,12 @@ int MainObject::ReadAllFiles(StringVector &inputFileVector, string const &inputF
 	if (inputFileVector.size() == 0 && inputFileList.size() > 0)
 	{
 	    ifstream fl;
-		fl.open(inputFileList.c_str(), ios::in);
+		fl.open(inputFileList.c_str(), ifstream::in);
 
 		if (!fl.is_open())
 		{
 			// try old input file name
-			fl.open(INPUT_FILE_LIST_OLD, ios::in);
+			fl.open(INPUT_FILE_LIST_OLD, ifstream::in);
 			if (!fl.is_open())
 			{
 				string err = "Error: Unable to open list file (";
@@ -1181,7 +1218,7 @@ int MainObject::ReadAllFiles(StringVector &inputFileVector, string const &inputF
 				else
 				{
 					// expand if item is a directory
-					if (!CUtil::ListAllFiles(fileName, searchFiles, inputFileVector))
+					if (!CUtil::ListAllFiles(fileName, searchFiles, inputFileVector, followSymLinks))
 						inputFileVector.push_back(fileName);
 				}
 			}
@@ -1304,6 +1341,7 @@ int MainObject::ReadAllFiles(StringVector &inputFileVector, string const &inputF
 						lineTooLong = true;
 						break;
 					}
+					oneline = CUtil::ReplaceSmartQuotes(oneline);
 					lineElement element(lineNum, oneline);
 					fmap.push_back(element);
 					getline(fr, oneline);
@@ -1500,7 +1538,7 @@ void MainObject::WriteUncountedFile(const string &msg, const string &uncFile, bo
 	}
 	if (!(*uncFS).is_open())
 	{
-		(*uncFS).open(filePath.c_str(), ofstream::app);
+		(*uncFS).open(filePath.c_str(), ofstream::out);
 		if (!(*uncFS).is_open())
 		{
 			string err = "Error: Failed to open uncounted files output file (";
@@ -1566,7 +1604,11 @@ unsigned int MainObject::DecideLanguage(const string &file_name, bool setCounter
 			found = true;
 			counter = iter->second;
 			if (setCounter && print_cmplx)
+			{
 				counter->isPrintKeyword = true;
+				if (print_cyclomatic_cmplx)
+					counter->isPrintCyclomatic = true;
+			}
 			break;
 		}
 	}
@@ -4666,7 +4708,7 @@ ofstream* MainObject::GetTotalOutputStream(const string &outputFileNamePrePend, 
 		if (!output_file_csv.is_open())
 		{
 			string fname = outputFileNamePrePend + "TOTAL" + OUTPUT_FILE_NAME_CSV;
-			output_file_csv.open(fname.c_str(), ios::out);
+			output_file_csv.open(fname.c_str(), ofstream::out);
 
 			if (!output_file_csv.is_open()) return NULL;
 
@@ -4679,7 +4721,7 @@ ofstream* MainObject::GetTotalOutputStream(const string &outputFileNamePrePend, 
 		if (!output_file.is_open())
 		{
 			string fname = outputFileNamePrePend + "TOTAL" + OUTPUT_FILE_NAME;
-			output_file.open(fname.c_str(), ios::out);
+			output_file.open(fname.c_str(), ofstream::out);
 
 			if (!output_file.is_open()) return NULL;
 
@@ -7607,7 +7649,7 @@ ofstream* MainObject::GetOutputSummaryStream(const string &outputFileNamePrePend
 		if (!output_summary_csv.is_open())
 		{
 			string fname = outputFileNamePrePend + OUTPUT_FILE_SUM_CSV;
-			output_summary_csv.open(fname.c_str(), ios::out);
+			output_summary_csv.open(fname.c_str(), ofstream::out);
 
 			if (!output_summary_csv.is_open()) return NULL;
 
@@ -7620,7 +7662,7 @@ ofstream* MainObject::GetOutputSummaryStream(const string &outputFileNamePrePend
 		if (!output_summary.is_open())
 		{
 			string fname = outputFileNamePrePend + OUTPUT_FILE_SUM;
-			output_summary.open(fname.c_str(), ios::out);
+			output_summary.open(fname.c_str(), ofstream::out);
 
 			if (!output_summary.is_open()) return NULL;
 
@@ -7938,7 +7980,7 @@ int MainObject::PrintComplexityResults(bool useListA, const string &outputFileNa
 	{
 		string cplxOutputFileName = outDir + outputFileNamePrePend;
 		cplxOutputFileName.append(OUTPUT_FILE_CPLX);
-		cplxOutputFile.open(cplxOutputFileName.c_str(), ios::out);
+		cplxOutputFile.open(cplxOutputFileName.c_str(), ofstream::out);
 		if (!cplxOutputFile.is_open())
 		{
 			string err = "Error: Unable to create file (";
@@ -7969,14 +8011,14 @@ int MainObject::PrintComplexityResults(bool useListA, const string &outputFileNa
 			cplxOutputFile << " --------------------------------------------------------------------------------------------";
 			for (i = 1; i <= loopCol; i++)
 				cplxOutputFile << "-----------";
-			cplxOutputFile << "------------------------------------" << endl;
+			cplxOutputFile << "+-----------------------------------" << endl;
 		}
 	}
 	if (print_csv)
 	{
 		string cplxOutputFileNameCSV = outDir + outputFileNamePrePend;
 		cplxOutputFileNameCSV.append(OUTPUT_FILE_CPLX_CSV);
-		cplxOutputFileCSV.open(cplxOutputFileNameCSV.c_str(), ios::out);
+		cplxOutputFileCSV.open(cplxOutputFileNameCSV.c_str(), ofstream::out);
 		if (!cplxOutputFileCSV.is_open())
 		{
 			string err = "Error: Unable to create file (";
@@ -8085,7 +8127,7 @@ int MainObject::PrintComplexityResults(bool useListA, const string &outputFileNa
 				}
 				for (i = itt2->second.cmplx_nestloop_count.size(); i < loopCol; i++)
 					cplxOutputFile << "          0";
-				cplxOutputFile << "       " << itt2->second.file_name << endl;
+				cplxOutputFile << "   |   " << itt2->second.file_name << endl;
 			}
 			if (print_csv)
 			{
@@ -8518,6 +8560,153 @@ int MainObject::PrintComplexityResults(bool useListA, const string &outputFileNa
 		cplxOutputFile.close();
 	if (print_csv)
 		cplxOutputFileCSV.close();
+
+	// print cyclomatic complexity if requested
+	if (print_cyclomatic_cmplx)
+		PrintCyclomaticComplexity(useListA, outputFileNamePrePend, printDuplicates);
+
+	return 1;
+}
+
+/*!
+* Prints the cyclomatic complexity results.
+*
+* \param useListA use file list A? (otherwise use list B)
+* \param outputFileNamePrePend name to prepend to the output file
+* \param printDuplicates print duplicate files? (otherwise print unique files)
+*
+* \return method status
+*/
+int MainObject::PrintCyclomaticComplexity(bool useListA, const string &outputFileNamePrePend, bool printDuplicates) 
+{
+	if (useListA)
+	{
+		if (printDuplicates && duplicateFilesInA2.size() < 1)
+			return 1;
+	}
+	else
+	{
+		if (printDuplicates && duplicateFilesInB2.size() < 1)
+			return 1;
+	}
+
+	SourceFileList* mySourceFile = (useListA) ? &SourceFileA : &SourceFileB;
+	bool found = false;
+
+	// check for counts
+	for (SourceFileList::iterator itt2 = mySourceFile->begin(); itt2 != mySourceFile->end(); itt2++)
+	{
+		if ((!printDuplicates && !itt2->second.duplicate) || (printDuplicates && itt2->second.duplicate))
+		{
+			if (itt2->second.cmplx_cycfunct_count.size() > 0)
+			{
+				found = true;
+				break;
+			}
+		}
+	}
+	if (!found)
+		return 1;
+
+	// open file and print headers
+	ofstream cycCplxOutputFile, cycCplxOutputFileCSV;
+	if (print_ascii || print_legacy)
+	{
+		string cycCplxOutputFileName = outDir + outputFileNamePrePend;
+		cycCplxOutputFileName.append(OUTPUT_FILE_CYC_CPLX);
+		cycCplxOutputFile.open(cycCplxOutputFileName.c_str(), ofstream::out);
+		if (!cycCplxOutputFile.is_open())
+		{
+			string err = "Error: Unable to create file (";
+			err += cycCplxOutputFileName;
+			err += "). Operation aborted";
+			cout << endl << err << endl;
+			CUtil::AddError(err);
+			return 0;
+		}
+
+		CUtil::PrintFileHeader(cycCplxOutputFile, "CYCLOMATIC COMPLEXITY RESULTS", cmdLine);
+
+		cycCplxOutputFile << "Function                                          Cyclomatic   Risk        |   File" << endl;
+		cycCplxOutputFile << "Name                                              Complexity               |   Name" << endl;
+		cycCplxOutputFile << "---------------------------------------------------------------------------+-----------------------" << endl;
+	}
+	if (print_csv)
+	{
+		string cycCplxOutputFileNameCSV = outDir + outputFileNamePrePend;
+		cycCplxOutputFileNameCSV.append(OUTPUT_FILE_CYC_CPLX_CSV);
+		cycCplxOutputFileCSV.open(cycCplxOutputFileNameCSV.c_str(), ofstream::out);
+		if (!cycCplxOutputFileCSV.is_open())
+		{
+			string err = "Error: Unable to create file (";
+			err += cycCplxOutputFileNameCSV;
+			err += "). Operation aborted";
+			cout << endl << err << endl;
+			CUtil::AddError(err);
+			return 0;
+		}
+
+		CUtil::PrintFileHeader(cycCplxOutputFileCSV, "CYCLOMATIC COMPLEXITY RESULTS", cmdLine);
+		cycCplxOutputFileCSV << "Function Name,Cyclomatic Complexity,Risk,File Name" << endl;
+	}
+
+	// print cyclomatic complexity for each file
+	for (SourceFileList::iterator itt2 = mySourceFile->begin(); itt2 != mySourceFile->end(); itt2++)
+	{
+		if (itt2->second.file_name.find(EMBEDDED_FILE_PREFIX) != string::npos) continue;
+
+		if ((!printDuplicates && !itt2->second.duplicate) || (printDuplicates && itt2->second.duplicate))
+		{
+			if (print_ascii || print_legacy)
+			{
+				srcLineVector::iterator it;
+				for (it = itt2->second.cmplx_cycfunct_count.begin(); it != itt2->second.cmplx_cycfunct_count.end(); it++)
+				{
+					cycCplxOutputFile.setf(ofstream::left);
+					cycCplxOutputFile.width(50);
+					cycCplxOutputFile << (*it).first;
+					cycCplxOutputFile.setf(ofstream::right);
+					cycCplxOutputFile.width(10);
+					cycCplxOutputFile << (*it).second;
+					cycCplxOutputFile.unsetf(ofstream::right);
+					cycCplxOutputFile << "   ";
+					cycCplxOutputFile.setf(ofstream::left);
+					cycCplxOutputFile.width(9);
+					if ((*it).second <= 10)
+						cycCplxOutputFile << "Low";
+					else if ((*it).second <= 20)
+						cycCplxOutputFile << "Medium";
+					else if ((*it).second <= 50)
+						cycCplxOutputFile << "High";
+					else
+						cycCplxOutputFile << "Very High";
+					cycCplxOutputFile.unsetf(ofstream::right);
+					cycCplxOutputFile << "   |   " << itt2->second.file_name << endl;
+				}
+			}
+			if (print_csv)
+			{
+				srcLineVector::iterator it;
+				for (it = itt2->second.cmplx_cycfunct_count.begin(); it != itt2->second.cmplx_cycfunct_count.end(); it++)
+				{
+					cycCplxOutputFileCSV << (*it).first << "," << (*it).second << ",";
+					if ((*it).second <= 10)
+						cycCplxOutputFileCSV << "Low,";
+					else if ((*it).second <= 20)
+						cycCplxOutputFileCSV << "Medium,";
+					else if ((*it).second <= 50)
+						cycCplxOutputFileCSV << "High,";
+					else
+						cycCplxOutputFileCSV << "Very High,";
+					cycCplxOutputFileCSV << itt2->second.file_name << endl;
+				}
+			}
+		}
+	}
+	if (print_ascii || print_legacy)
+		cycCplxOutputFile.close();
+	if (print_csv)
+		cycCplxOutputFileCSV.close();
 
 	return 1;
 }

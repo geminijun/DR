@@ -547,3 +547,65 @@ void CCJavaCsCounter::LSLOC(results* result, string line, string lineBak, string
 	if (temp_lines == 0 && phys_data_lines == 0 && phys_exec_lines == 0)
 		phys_exec_lines = 1;
 }
+
+/*!
+* Parses lines for function/method names.
+*
+* \param line line to be processed
+* \param lastline last line processed
+* \param functionStack stack of functions
+* \param functionName function name found
+*
+* \return 1 if function name is found
+*/
+int CCJavaCsCounter::ParseFunctionName(string line, string &lastline, stack<string> &functionStack, string &functionName)
+{
+	size_t idx;
+	idx = line.find('{');
+
+	if (idx != string::npos)
+	{
+		// check whether it is at first index, if yes then function name is at above line
+		if (idx == 1 && lastline.find("class ") == string::npos)
+		{
+			functionStack.push(lastline);
+		}
+		else
+		{
+			if (line.find("class ") == string::npos)
+			{
+				string temp_String = line.substr(0, idx);
+				lastline += temp_String;
+				functionStack.push(lastline);
+			}
+		}
+	}
+	else
+	{
+		if (lastline.find('(') != string::npos)
+		{
+			// add this line in lastline
+			lastline += line;
+		}
+		else if (line.find('(') != string::npos)
+		{
+			// make this line the lastline
+			lastline = line;
+		}
+	}
+
+	idx = line.find('}');
+	if (idx != string::npos && !functionStack.empty())
+	{
+		string tempString = functionStack.top();
+		functionStack.pop();
+		if (functionStack.empty())
+		{
+			idx = tempString.find('(');
+			functionName = tempString.substr(0, idx);
+			lastline.erase();
+			return 1;
+		}
+	}
+	return 0;
+}

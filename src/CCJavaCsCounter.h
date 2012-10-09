@@ -28,6 +28,7 @@ protected:
 		bool &forflag, bool &found_forifwhile, bool &found_while, char &prev_char, bool &data_continue,
 		unsigned int &temp_lines, unsigned int &phys_exec_lines, unsigned int &phys_data_lines,
 		bool &inArrayDec, bool &found_for, unsigned int &openBrackets, StringVector &loopLevel);
+	virtual int ParseFunctionName(string line, string &lastline, stack<string> &functionStack, string &functionName);
 };
 
 #endif

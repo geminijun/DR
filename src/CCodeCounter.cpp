@@ -14,6 +14,7 @@
 CCodeCounter::CCodeCounter()
 {
 	isPrintKeyword = false;
+	isPrintCyclomatic = false;
 	QuoteStart = "";
 	QuoteEnd = "";
 	QuoteEscapeFront = 0;
@@ -178,7 +179,7 @@ ofstream* CCodeCounter::GetOutputStream(const string &outputFileNamePrePend, con
 		if (!output_file_csv.is_open())
 		{
 			string fname = outputFileNamePrePend + language_name + OUTPUT_FILE_NAME_CSV;
-			output_file_csv.open(fname.c_str(),ios::out);
+			output_file_csv.open(fname.c_str(), ofstream::out);
 
 			if (!output_file_csv.is_open()) return NULL;
 
@@ -196,7 +197,7 @@ ofstream* CCodeCounter::GetOutputStream(const string &outputFileNamePrePend, con
 		if (!output_file.is_open())
 		{
 			string fname = outputFileNamePrePend + language_name + OUTPUT_FILE_NAME;
-			output_file.open(fname.c_str(),ios::out);
+			output_file.open(fname.c_str(), ofstream::out);
 
 			if (!output_file.is_open()) return NULL;
 
@@ -317,8 +318,8 @@ int CCodeCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd, 
 		{
 			contd = false;
 			strline.replace(idx_start + 1, idx_end - idx_start - 1, idx_end - idx_start - 1, '$');
+			idx_start = idx_end + 1;
 		}
-		idx_start = idx_end + 1;
 	}
 	return 1;
 }
@@ -585,9 +586,10 @@ int CCodeCounter::CountComplexity(filemap* fmap, results* result)
 	if (classtype == UNKNOWN || classtype == DATAFILE)
 		return 0;
 	filemap::iterator fit;
-	unsigned int cnt;
-	string line;
+	unsigned int cnt, cyclomatic_cnt = 0;
+	string line, lastline, function_name = "";
 	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
+	stack<string> function_stack;
 
 	for (fit = fmap->begin(); fit != fmap->end(); fit++)
 	{
@@ -642,6 +644,19 @@ int CCodeCounter::CountComplexity(filemap* fmap, results* result)
 		cnt = 0;
 		CUtil::CountTally(line, cmplx_pointer_list, cnt, 1, exclude, "", "", &result->cmplx_pointer_count, casesensitive);
 		result->cmplx_pointer_lines += cnt;
+		
+		// cyclomatic complexity (if requested)
+		if (isPrintCyclomatic && cmplx_cyclomatic_list.size() > 0)
+		{
+			CUtil::CountTally(line, cmplx_cyclomatic_list, cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
+
+			if (ParseFunctionName(line, lastline, function_stack, function_name))
+			{
+				result->cmplx_cycfunct_count.insert(make_pair(function_name, cyclomatic_cnt + 1));
+				function_name = "";
+				cyclomatic_cnt = 0;
+			}
+		}
 	}
 	return 1;
 }
@@ -664,4 +679,20 @@ int CCodeCounter::LanguageSpecificProcess(filemap* fmap, results* result, filema
 			result->exec_lines[PHY]++;
 	}
 	return 1;
+}
+
+/*!
+* Parses lines for function/method names.
+* This method is typically implemented in the specific language sub-class.
+*
+* \param line line to be processed
+* \param lastline last line processed
+* \param functionStack stack of functions
+* \param functionName function name found
+*
+* \return 1 if function name is found
+*/
+int CCodeCounter::ParseFunctionName(string line, string &lastline, stack<string> &functionStack, string &functionName)
+{
+	return 0;
 }

@@ -51,6 +51,7 @@ results& results::operator= (const results& obj)
 	cmplx_assign_count.assign(obj.cmplx_assign_count.begin(), obj.cmplx_assign_count.end());
 	cmplx_pointer_count.assign(obj.cmplx_pointer_count.begin(), obj.cmplx_pointer_count.end());
 	cmplx_nestloop_count.assign(obj.cmplx_nestloop_count.begin(), obj.cmplx_nestloop_count.end());
+	cmplx_cycfunct_count.insert(obj.cmplx_cycfunct_count.begin(),obj.cmplx_cycfunct_count.end());
 	trunc_lines = obj.trunc_lines;
 	total_lines = obj.total_lines;
 	e_flag = obj.e_flag;
@@ -104,6 +105,7 @@ void results::reset()
 	cmplx_assign_count.clear();
 	cmplx_pointer_count.clear();
 	cmplx_nestloop_count.clear();
+	cmplx_cycfunct_count.clear();
 	trunc_lines = 0;
 	total_lines = 0;
 	e_flag = false;

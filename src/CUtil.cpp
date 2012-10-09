@@ -345,18 +345,27 @@ string CUtil::ExtractFilename(const string &filepath)
 * \param folder folder to list
 * \param fileExtList list of file extensions to search
 * \param fileList list of files in folder
+* \param symLinks follow Unix links?
 *
 * \return path exists and is a directory
 */
-bool CUtil::ListAllFiles(string &folder, StringVector &fileExtList, StringVector &fileList) 
+bool CUtil::ListAllFiles(string &folder, StringVector &fileExtList, StringVector &fileList, bool symLinks) 
 {
 	StringVector tmpList;
 	string file;
-	size_t i, n, pos;
+	size_t i, n;
+
+	folder = CUtil::TrimString(folder);
+
+#ifdef UNIX
+	// skip links if user specified
+	struct stat inodeData;
+	if (!symLinks && (lstat(folder.c_str(), &inodeData) < 0 || S_ISLNK(inodeData.st_mode)))
+		return(false);
+#endif
 
 	// process folder
-	folder = CUtil::TrimString(folder);
-	if (!GetFileList(tmpList, folder))
+	if (!GetFileList(tmpList, folder, symLinks))
 		return(false);
 
 	// read through tmpList and get the names of all the files in the directory mentioned
@@ -365,15 +374,14 @@ bool CUtil::ListAllFiles(string &folder, StringVector &fileExtList, StringVector
 		file = tmpList.at(n);
 
 		// if no-extension filtering, each file is pushed into the fileList
-		if (fileExtList.at(0) == "*.*")
+		if (fileExtList.at(0) == "*.*" || fileExtList.at(0) == "*")
 			fileList.push_back(file);
 		else
 		{
 			// for each extension, if file extension matches with the extension, the file is pushed into the fileList
 			for (i = 0; i < fileExtList.size(); i++)
 			{
-				pos = file.find_last_of(".");
-				if (pos != string::npos && fileExtList.at(i).substr(2) == file.substr(pos + 1))
+				if (MatchFilename(ExtractFilename(file), fileExtList.at(i)))
 					fileList.push_back(file);
 			}
 		}
@@ -388,10 +396,11 @@ bool CUtil::ListAllFiles(string &folder, StringVector &fileExtList, StringVector
 *
 * \param fileList list of files in folder
 * \param path folder's path to list
+* \param symLinks follow Unix links?
 *
 * \return path exists and is a directory
 */
-bool CUtil::GetFileList(StringVector &fileList, const string &path)
+bool CUtil::GetFileList(StringVector &fileList, const string &path, bool symLinks)
 {
 	string fullPath;
 #ifdef UNIX
@@ -414,15 +423,35 @@ bool CUtil::GetFileList(StringVector &fileList, const string &path)
 		{
 			// fullPath contains the path + the file name.
 			fullPath = path + '/' + fileRead->d_name;
-			if (stat(fullPath.c_str(), &inodeData) >= 0)
+			if (symLinks)
 			{
-				// for each file, store the fullPath into the ofstream
-				if (!S_ISDIR(inodeData.st_mode))
-					fileList.push_back(fullPath);
-				else
+				if (stat(fullPath.c_str(), &inodeData) >= 0)
 				{
-					// for each directory, its file list is obtained
-					GetFileList(fileList, fullPath);
+					// for each file, store the fullPath into the ofstream
+					if (!S_ISDIR(inodeData.st_mode))
+						fileList.push_back(fullPath);
+					else
+					{
+						// for each directory, its file list is obtained
+						GetFileList(fileList, fullPath, symLinks);
+					}
+				}
+			}
+			else
+			{
+				if (lstat(fullPath.c_str(), &inodeData) >= 0)
+				{
+					// for each file, store the fullPath into the ofstream
+					if (!S_ISLNK(inodeData.st_mode))
+					{
+						if (!S_ISDIR(inodeData.st_mode))
+							fileList.push_back(fullPath);
+						else
+						{
+							// for each directory, its file list is obtained
+							GetFileList(fileList, fullPath, symLinks);
+						}
+					}
 				}
 			}
 		}
@@ -451,12 +480,121 @@ bool CUtil::GetFileList(StringVector &fileList, const string &path)
 		else if ((strcmp(".", c_file.name) != 0) && (strcmp("..", c_file.name) != 0))
 		{
 			// for each directory, except '.' and '..', its file list is obtained
-			GetFileList(fileList, fullPath);
+			GetFileList(fileList, fullPath, symLinks);
 		}
 	}
 	// close the directory
 	_findclose(hFile);
 #endif
+	return(true);
+}
+
+/*!
+* For a given filename, this method checks whether the file matches
+* a given match string containing wildcards (*) and placeholders (?).
+*
+* \param filename filename to be checked
+* \param matchstr string pattern to match
+*
+* \return filename matches pattern
+*/
+bool CUtil::MatchFilename(const string &filename, const string &matchstr)
+{
+	int i, j, k, f, m, fl, ml, s, e, sl, lim;
+
+	fl = filename.length();
+	ml = matchstr.length();
+	if (ml == 0)
+		return(fl == 0);
+	if (fl == 0)
+		return(false);
+
+	f = 0;
+	for (m = 0; m < ml; m++)
+	{
+		if (matchstr[m] == '?')
+		{
+			f++;
+			if (f > fl)
+				return(false);
+			continue;
+		}
+		else if (matchstr[m] == '*')
+		{
+			// search for next non-wild card character
+			s = m + 1;
+			while (s < ml && matchstr[s] == '*')
+				s++;
+			if (s >= ml)
+				break;
+			e = s + 1;
+			while (e < ml && matchstr[e] != '*')
+				e++;
+			sl = e - s;
+			lim = fl - sl - f;
+			if (e >= ml)
+			{
+				// check the end of the filename
+				if (fl - f < sl)
+					return(false);
+				for (j = fl - sl, k = s; j < fl; j++, k++)
+				{
+					if (matchstr[k] != '?')
+					{
+#ifdef UNIX
+						// case-sensitive match
+						if (matchstr[k] != filename[j])
+							break;
+#else
+						// case-insensitive match
+						if (tolower(matchstr[k]) != tolower(filename[j]))
+							break;
+#endif
+					}
+				}
+				return(j >= fl);
+			}
+			for (i = 0; i <= lim; i++)
+			{
+				for (j = f + i, k = s; j < f + i + sl; j++, k++)
+				{
+					if (matchstr[k] != '?')
+					{
+#ifdef UNIX
+						// case-sensitive match
+						if (matchstr[k] != filename[j])
+							break;
+#else
+						// case-insensitive match
+						if (tolower(matchstr[k]) != tolower(filename[j]))
+							break;
+#endif
+					}
+				}
+				if (j >= f + i + sl)
+				{
+					f += i + sl;
+					break;
+				}
+			}
+			if (i > lim)
+				return(false);
+			m = e - 1;
+			continue;
+		}
+#ifdef UNIX
+		// case-sensitive match
+		if (matchstr[m] != filename[f])
+			return(false);
+#else
+		// case-insensitive match
+		if (tolower(matchstr[m]) != tolower(filename[f]))
+			return(false);
+#endif
+		f++;
+	}
+	if (f < fl && matchstr[ml - 1] != '*')
+		return(false);
 	return(true);
 }
 
@@ -547,7 +685,7 @@ int CUtil::PrintFileHeader(ofstream &pout, const string &title, const string &cm
 	time_t myTime;
 	struct tm *myLocalTime;
 	time(&myTime);
-#ifdef UNIX
+#if defined UNIX || defined MINGW
 	myLocalTime = localtime(&myTime);
 #else
 	struct tm myLT;
@@ -558,7 +696,7 @@ int CUtil::PrintFileHeader(ofstream &pout, const string &title, const string &cm
 	myOutput = "USC Unified CodeCount (UCC)";
 	PrintFileHeaderLine(pout, myOutput);
 
-	myOutput = "(c) Copyright 1998 - 2011 University of Southern California";
+	myOutput = "(c) Copyright 1998 - 2012 University of Southern California";
 	PrintFileHeaderLine(pout, myOutput);
 	pout << endl;
 
@@ -645,7 +783,7 @@ void CUtil::AddError(const string &err, const string &outDir)
 		time_t myTime;
 		struct tm *myLocalTime;
 		time(&myTime);
-#ifdef UNIX
+#if defined UNIX || defined MINGW
 		myLocalTime = localtime(&myTime);
 #else
 		struct tm myLT;
@@ -665,14 +803,13 @@ void CUtil::AddError(const string &err, const string &outDir)
 	// open the error file if not already opened
 	if (!errFile.is_open())
 	{
-		errFile.open(filePath.c_str(), ofstream::app);
+		errFile.open(filePath.c_str(), ofstream::out);
 		if (! errFile.is_open())
 		{
 			cerr << "Error: Failed to open error log file" << endl;
 			return;
 		}
 	}
-
 	errFile << err << endl;
 	return;
 }
@@ -743,4 +880,21 @@ string CUtil::ClearRedundantSpaces(const string &str)
 
 	return str_new;	
 #undef SPECIAL_CHARS
+}
+
+/*!
+* Returns a string without smart quotes.
+*
+* \param str original string
+*
+* \return updated string
+*/
+string CUtil::ReplaceSmartQuotes(const string &str)
+{
+	string str1 = str;
+	std::replace(str1.begin(), str1.end(), char(145), '\'');
+	std::replace(str1.begin(), str1.end(), char(146), '\'');
+	std::replace(str1.begin(), str1.end(), char(147), '\"');
+	std::replace(str1.begin(), str1.end(), char(148), '\"');
+	return str1;
 }

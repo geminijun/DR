@@ -695,7 +695,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "PHP";
 				ofname += OUTPUT_FILE_NAME_CSV;
-				php_output_file_csv.open(ofname.c_str(),ios::out);
+				php_output_file_csv.open(ofname.c_str(), ofstream::out);
 
 				if (!php_output_file_csv.is_open()) return NULL;
 				CUtil::PrintFileHeader(php_output_file_csv, "SLOC COUNT RESULTS", cmd);
@@ -713,7 +713,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "PHP";
 				ofname += OUTPUT_FILE_NAME;
-				php_output_file.open(ofname.c_str(),ios::out);
+				php_output_file.open(ofname.c_str(), ofstream::out);
 
 				if (!php_output_file.is_open()) return NULL;
 				CUtil::PrintFileHeader(php_output_file, "SLOC COUNT RESULTS", cmd);
@@ -744,7 +744,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "JSP";
 				ofname += OUTPUT_FILE_NAME_CSV;
-				jsp_output_file_csv.open(ofname.c_str(),ios::out);
+				jsp_output_file_csv.open(ofname.c_str(), ofstream::out);
 
 				if (!jsp_output_file_csv.is_open()) return NULL;
 
@@ -763,7 +763,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "JSP";
 				ofname += OUTPUT_FILE_NAME;
-				jsp_output_file.open(ofname.c_str(),ios::out);
+				jsp_output_file.open(ofname.c_str(), ofstream::out);
 
 				if (!jsp_output_file.is_open()) return NULL;
 
@@ -795,7 +795,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "ASP";
 				ofname += OUTPUT_FILE_NAME_CSV;
-				asp_output_file_csv.open(ofname.c_str(),ios::out);
+				asp_output_file_csv.open(ofname.c_str(), ofstream::out);
 
 				if (!asp_output_file_csv.is_open()) return NULL;
 
@@ -814,7 +814,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "ASP";
 				ofname += OUTPUT_FILE_NAME;
-				asp_output_file.open(ofname.c_str(),ios::out);
+				asp_output_file.open(ofname.c_str(), ofstream::out);
 
 				if (!asp_output_file.is_open()) return NULL;
 
@@ -846,7 +846,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "ColdFusion";
 				ofname += OUTPUT_FILE_NAME_CSV;
-				cfm_output_file_csv.open(ofname.c_str(),ios::out);
+				cfm_output_file_csv.open(ofname.c_str(), ofstream::out);
 
 				if (!cfm_output_file_csv.is_open()) return NULL;
 
@@ -865,7 +865,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "ColdFusion";
 				ofname += OUTPUT_FILE_NAME;
-				cfm_output_file.open(ofname.c_str(),ios::out);
+				cfm_output_file.open(ofname.c_str(), ofstream::out);
 
 				if (!cfm_output_file.is_open()) return NULL;
 
@@ -897,7 +897,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "XML";
 				ofname += OUTPUT_FILE_NAME_CSV;
-				xml_output_file_csv.open(ofname.c_str(),ios::out);
+				xml_output_file_csv.open(ofname.c_str(), ofstream::out);
 
 				if (!xml_output_file_csv.is_open()) return NULL;
 
@@ -916,7 +916,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "XML";
 				ofname += OUTPUT_FILE_NAME;
-				xml_output_file.open(ofname.c_str(),ios::out);
+				xml_output_file.open(ofname.c_str(), ofstream::out);
 
 				if (!xml_output_file.is_open()) return NULL;
 
@@ -948,7 +948,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "HTML";
 				ofname += OUTPUT_FILE_NAME_CSV;
-				html_output_file_csv.open(ofname.c_str(),ios::out);
+				html_output_file_csv.open(ofname.c_str(), ofstream::out);
 
 				if (!html_output_file_csv.is_open()) return NULL;
 
@@ -967,7 +967,7 @@ ofstream* CWebCounter::GetOutputStream(WebType webType, const string &outputFile
 			{
 				string ofname = outputFileNamePrePend + "HTML";
 				ofname += OUTPUT_FILE_NAME;
-				html_output_file.open(ofname.c_str(),ios::out);
+				html_output_file.open(ofname.c_str(), ofstream::out);
 
 				if (!html_output_file.is_open()) return NULL;
 

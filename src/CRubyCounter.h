@@ -23,7 +23,6 @@ public:
 
 protected:
 	virtual int ReplaceQuote(string &strline, size_t &idx_start, bool &contd, char &CurrentQuoteEnd);
-	virtual int CountDirectiveSLOC(filemap* fmap, results* result, filemap* fmapBak = NULL);
 	virtual int LanguageSpecificProcess(filemap* fmap, results* result, filemap* fmapBak = NULL);
 	void LSLOC(results* result, string line, string lineBak, string &strLSLOC, string &strLSLOCBak);
 

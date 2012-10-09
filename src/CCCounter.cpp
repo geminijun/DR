@@ -184,4 +184,12 @@ CCCounter::CCCounter()
 	cmplx_preproc_list.push_back("#using");
 
 	cmplx_pointer_list.push_back("->");
+
+	cmplx_cyclomatic_list.push_back("if");
+	cmplx_cyclomatic_list.push_back("case");
+	cmplx_cyclomatic_list.push_back("do");
+	cmplx_cyclomatic_list.push_back("while");
+	cmplx_cyclomatic_list.push_back("for");
+	cmplx_cyclomatic_list.push_back("catch");
+	cmplx_cyclomatic_list.push_back("?");
 }

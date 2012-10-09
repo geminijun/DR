@@ -224,8 +224,8 @@ int CPythonCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd
 		{
 			contd = false;
 			strline.replace(idx_start + 1, idx_end - idx_start - 1, idx_end - idx_start - 1, '$');
+			idx_start = idx_end + 1;
 		}
-		idx_start = idx_end + 1;
 	}
 	return 1;
 }

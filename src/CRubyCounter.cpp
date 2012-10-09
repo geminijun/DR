@@ -17,38 +17,18 @@ CRubyCounter::CRubyCounter()
 
 	file_extension.push_back(".rb");
 
-	QuoteStart = "\"%/<";
-	QuoteEnd = "\"/";
+	QuoteStart = "\"'%/<";
+	QuoteEnd = "\"'/";
 	QuoteEscapeFront = '\\';
-	ContinueLine = ".,";
+	ContinueLine = ".,\\+-*/";
 
 	BlockCommentStart.push_back("=begin");
 	BlockCommentEnd.push_back("=end");
 
 	LineCommentStart.push_back("#");
 	delimiter = "";
-
-	directive.push_back("RubyAccessHandler");
-	directive.push_back("RubyAddPath");
-	directive.push_back("RubyAuthenHandler");
-	directive.push_back("RubyAuthzHandler");
-	directive.push_back("RubyCleanupHandler");
-	directive.push_back("RubyFixupHandler");
-	directive.push_back("RubyGcPerRequest");
-	directive.push_back("RubyHandler"); 
-	directive.push_back("RubyInitHandler");
-	directive.push_back("RubyKanjiCode");
-	directive.push_back("RubyLogHandler");
-	directive.push_back("RubyHeaderParserHandler");
-	directive.push_back("RubyOutputMode");
-	directive.push_back("RubyPassEnv");
-	directive.push_back("RubyRequire");
-	directive.push_back("RubyRestrictDirectives");
-	directive.push_back("RubySetEnv");
-	directive.push_back("RubyTimeOut");
-	directive.push_back("RubyTransHandler");
-	directive.push_back("RubyTypeHandler");
-
+	
+	exec_name_list.push_back("alias");
 	exec_name_list.push_back("begin");
 	exec_name_list.push_back("break");
 	exec_name_list.push_back("case");
@@ -67,10 +47,14 @@ CRubyCounter::CRubyCounter()
 	exec_name_list.push_back("exit");
 	exec_name_list.push_back("for");
 	exec_name_list.push_back("if");
+	exec_name_list.push_back("module");
 	exec_name_list.push_back("new");
+	exec_name_list.push_back("next");
 	exec_name_list.push_back("puts");
 	exec_name_list.push_back("print");
+	exec_name_list.push_back("redo");
 	exec_name_list.push_back("rescue");
+	exec_name_list.push_back("retry");
 	exec_name_list.push_back("return");
 	exec_name_list.push_back("switch");
 	exec_name_list.push_back("throw");
@@ -80,6 +64,7 @@ CRubyCounter::CRubyCounter()
 	exec_name_list.push_back("until");
 	exec_name_list.push_back("when");
 	exec_name_list.push_back("while");
+	exec_name_list.push_back("yield");
 
 	math_func_list.push_back("atan2");
 	math_func_list.push_back("cos");
@@ -178,8 +163,19 @@ int CRubyCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd, 
 			delimiter == tstrline)
 		{
 			// end of here document
+			for (i = 0; i < ContinueLine.length(); i++)
+			{
+				if (delimiter[0] == ContinueLine[i])
+				{
+					// avoid continuation
+					strline = "$";
+					break;
+				}
+			}
 			contd = false;
 			delimiter = "";
+			idx_start = strline.length();
+			return 0;
 		}
 		else
 		{
@@ -207,7 +203,11 @@ int CRubyCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd, 
 					{
 						if (strline[i + 1] == 'Q' ||
 							strline[i + 1] == 'q' ||
-							strline[i + 1] == 'r')
+							strline[i + 1] == 'r' ||
+							strline[i + 1] == 's' ||
+							strline[i + 1] == 'W' ||
+							strline[i + 1] == 'w' ||
+							strline[i + 1] == 'x')
 							i++;
 					} 
 					if (i + 1 == strlen)
@@ -226,11 +226,10 @@ int CRubyCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd, 
 					i++;
 				}					
 				break;
-
 			case '<':
 				if (!foundQuote)
 				{
-					if (i + 2 < strlen && strline[i + 1] == '<')
+					if (i + 2 < strlen && strline[i + 1] == '<' && strline[i + 2] != ' ' && strline[i + 2] != '\t')
 					{
 						// here document
 						// foundQuote = true;
@@ -255,8 +254,18 @@ int CRubyCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd, 
 						tstrline = CUtil::TrimString(tstrline);
 
 						size_t i1 = 0;
-						while (heredoc_deli.find(tstrline[i1]) != string::npos && i1 < tstrline.length())
-							i1++;
+						if (tstrline.length() > 2 && (tstrline.substr(0, 2) == "-\"" || tstrline.substr(0, 2) == "-'"))
+						{
+							i1 = 2;
+							char qChar = tstrline[1];
+							while (i1 < tstrline.length() && tstrline[i1] != qChar)
+								i1++;
+						}
+						else
+						{
+							while (i1 < tstrline.length() && heredoc_deli.find(tstrline[i1]) != string::npos)
+								i1++;
+						}
 
 						delimiter = tstrline.substr(0, i1);
 						delimiter = CUtil::TrimString(delimiter);
@@ -275,7 +284,6 @@ int CRubyCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd, 
 					}
 				}
 				break;
-
 			case '/':
 				if (!foundQuote)
 				{
@@ -291,7 +299,6 @@ int CRubyCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd, 
 					idx_start = i + 1;
 				}
 				break;
-
 			default:
 				if (foundQuote)
 				{
@@ -335,51 +342,18 @@ int CRubyCounter::ReplaceQuote(string &strline, size_t &idx_start, bool &contd, 
 				break;
 			}
 			i++;
+			if (i > idx_start && !foundQuote)
+				break;
 		}
 	}
-	return CCodeCounter::ReplaceQuote(strline, idx_start, contd, CurrentQuoteEnd);
-}
-
-/*!
-* Counts directive lines of code.
-*
-* \param fmap list of processed file lines
-* \param result counter results
-* \param fmapBak list of original file lines (same as fmap except it contains unmodified quoted strings)
-*
-* \return method status
-*/
-int CRubyCounter::CountDirectiveSLOC(filemap* fmap, results* result, filemap* fmapBak)
-{
-	bool trunc_flag = false;
-	size_t strSize;
-	unsigned int cnt = 0;
-	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$/\\<>.+?!@#$%^&*()-+*";
-	string strDirLine = "";
-
-	filemap::iterator itfmBak = fmapBak->begin();
-	for (filemap::iterator iter = fmap->begin(); iter!=fmap->end(); iter++, itfmBak++)
+	int ret = CCodeCounter::ReplaceQuote(strline, idx_start, contd, CurrentQuoteEnd);
+	if (contd && !foundQuote)
 	{
-		if (CUtil::CheckBlank(iter->line))
-			continue;
-
-		cnt = 0;
-		CUtil::CountTally(" " + iter->line, directive, cnt, 1, exclude, "", "", &result->directive_count);
-
-		if (cnt != 0)
-		{
-			strSize = CUtil::TruncateLine(itfmBak->line.length(), 0, result->lsloc_truncate, trunc_flag);
-			if (strSize > 0)
-			{
-				strDirLine = itfmBak->line.substr(0, strSize);
-				if (result->addSLOC(strDirLine, trunc_flag))
-					result->directive_lines[LOG]++;
-				result->directive_lines[PHY] ++;
-			}
-			iter->line = "";
-		}
- 	}
-	return 1;
+		strline[strline.length() - 1] = ContinueLine[0];
+		if (delimiter == "")
+			delimiter = CurrentQuoteEnd;
+	}
+	return ret;
 }
 
 /*!
@@ -455,19 +429,19 @@ int CRubyCounter::LanguageSpecificProcess(filemap* fmap, results* result, filema
 */
 void CRubyCounter::LSLOC(results* result, string line, string lineBak, string &strLSLOC, string &strLSLOCBak)
 {
-	static string control_modifiers[] = {"if", "for", "unless", "while", "until"};
-	static size_t control_mod_cnt = 4;
+	static string control_modifiers[] = {"if", "for", "unless", "while", "until", "when", "close", "elsif", "else", "then"};
+	static size_t control_mod_cnt = 10;
 	size_t start = 0; // starting index of the working string
-	size_t i = 0, strSize = string::npos;
+	size_t i, j, strSize = string::npos;
+	size_t idx = string::npos;
 	bool trunc_flag = false;
 	unsigned int cnt = 0;
 
 	string tmp = CUtil::TrimString(strLSLOC);
+	string tline = CUtil::TrimString(line);
 	bool line_skipped = false;
 
-	string tline = CUtil::TrimString(line);
-
-	if (tline == "end" || tline == "else" || tline == "}")
+	if (tline == "end" || tline == "else" || tline == "}" || tline == "]")
 	{
 		if (tmp.length() > 0)
 			line_skipped = true;
@@ -475,73 +449,113 @@ void CRubyCounter::LSLOC(results* result, string line, string lineBak, string &s
 			return;
 	}
 
-	size_t idx = string::npos;
-	for (i = 0; i < control_mod_cnt; i++)
+	while (start < line.length())
 	{
-		idx = CUtil::FindKeyword(line, control_modifiers[i]);
+		strSize = string::npos;
+
+		// get first control modifier
+		idx = line.find(';', start);
+		i = line.find(':', start);
+		if (i != string::npos && (idx == string::npos || i < idx))
+		{
+			// avoid processing :: and splitting ternary operator x ? y : z
+			if (i >= line.length() - 1 || line[i + 1] != ':')
+			{
+				for (j = i - 1; j > start; j--)
+				{
+					if (line[j] == '?')
+						break;
+				}
+				if (j <= start)
+					idx = i;
+			}
+		}
+		for (j = 0; j < control_mod_cnt; j++)
+		{
+			i = CUtil::FindKeyword(line, control_modifiers[j], start);
+			if (i != string::npos && (idx == string::npos || i < idx))
+			{
+				if (CUtil::FindKeyword(tline, control_modifiers[j]) != 0)
+					idx = i;
+			}
+		}
+
+		// process modifier
 		if (idx != string::npos)
 		{
-			if (CUtil::FindKeyword(tline, control_modifiers[i]) != 0)
+			if (line[idx] == ';')
 			{
-				// only extract if the mod in the middle of line
 				strSize = CUtil::TruncateLine(idx + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
-				break;
-			}
-		}
-	}
-
-	if (strSize > 0 && strSize != string::npos)	// only if (idx != 0 && idx != string::npos) returns true
-	{
-		strLSLOC += line.substr(start, strSize - 1);
-		strLSLOCBak += lineBak.substr(start, strSize - 1);
-	} 
-	else if (!line_skipped)
-	{
-		strLSLOC += line;
-		strLSLOCBak += lineBak;
-		
-		if (tline.length() > 0)
-		{
-			for (i = 0; i < ContinueLine.length(); i++)
-			{
-				if (tline.find_last_of(ContinueLine[i]) == tline.length() - 1)
+				if (strSize > 1 && CUtil::TrimString(line.substr(start, strSize - 1)) != ";")
 				{
-					// continued to the next line
-					return;
+					// only include ';' if it stands alone
+					strSize--;
 				}
+				idx++;
 			}
-		}
-	}
-
-	if (CUtil::TrimString(strLSLOC).length() == 0)
-		return;
-	
-	if (result->addSLOC(strLSLOCBak, trunc_flag))
-		result->exec_lines[LOG]++;
-
-	if (idx != 0 && idx != string::npos)
-	{
-		// the line has two logical lines
-		strLSLOC = line.substr(idx);
-		strLSLOCBak = lineBak.substr(idx);
-
-		if (tline.length() == 0)
-			return;
-		for (i = 0; i < ContinueLine.length(); i++)
-		{
-			if (tline.find_last_of(ContinueLine[i]) == tline.length() - 1)
+			else if (line[idx] == ':')
 			{
-				// continued to the next line
-				return;
+				strSize = CUtil::TruncateLine(idx + 1 - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+				idx++;
+			}
+			else if (line.length() >= idx + 4 && line.substr(idx, 4) == "then")
+			{
+				idx += 4;
+				strSize = CUtil::TruncateLine(idx - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			}
+			else
+				strSize = CUtil::TruncateLine(idx - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+		}
+
+		if (strSize > 0 && strSize != string::npos)	// only if (idx != 0 && idx != string::npos) returns true
+		{
+			strLSLOC += line.substr(start, strSize);
+			strLSLOCBak += lineBak.substr(start, strSize);
+		}
+		else if (!line_skipped)
+		{
+			strSize = CUtil::TruncateLine(line.length() - start, strLSLOC.length(), result->lsloc_truncate, trunc_flag);
+			if (strSize > 0)
+			{
+				strLSLOC += line.substr(start, strSize);
+				strLSLOCBak += lineBak.substr(start, strSize);
+			}
+
+			if (tline.length() > 0)
+			{
+				for (i = 0; i < ContinueLine.length(); i++)
+				{
+					if (tline.find_last_of(ContinueLine[i]) == tline.length() - 1)
+					{
+						// continued to the next line
+						if (tline[tline.length() - 1] == '\\')
+						{
+							i = strLSLOC.find_last_of('\\');
+							if (i != string::npos)
+							{
+								strLSLOC[i] = ' ';
+								strLSLOCBak[i] = ' ';
+							}
+						}
+						return;
+					}
+				}
 			}
 		}
 		if (CUtil::TrimString(strLSLOC).length() == 0)
 			return;
+
+		// add SLOC
 		if (result->addSLOC(strLSLOCBak, trunc_flag))
 			result->exec_lines[LOG]++;
-	}
-	if (tline.length() == 0)
-		return;
+		strLSLOC = strLSLOCBak = "";
 
-	strLSLOC = strLSLOCBak = "";
+		if (idx != 0 && idx != string::npos)
+		{
+			start = idx;
+			tline = CUtil::TrimString(line.substr(start));
+		}
+		else
+			start = string::npos;
+	}
 }

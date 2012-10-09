@@ -218,6 +218,7 @@ protected:
 	int PrintTotalCountResults(bool useListA = true, const string &outputFileNamePrePend = "",
 		StringVector* filesToPrint = NULL, bool excludeFiles = true);
 	int PrintComplexityResults(bool useListA = true, const string &outputFileNamePrePend = "", bool printDuplicates = false);
+	int PrintCyclomaticComplexity(bool useListA = true, const string &outputFileNamePrePend = "", bool printDuplicates = false);
 	void PrintDuplicateSummary(bool useListA = true, const string &outputFileNamePrePend = "");
 	void PrintDuplicateList(StringVector& myList1, StringVector& myList2, ofstream& outfile, bool csvFormat = false);
 	void FindDuplicateFiles(SourceFileList &fileList, StringVector &dupList1, StringVector &dupList2, bool checkMatch = false);
@@ -259,11 +260,13 @@ protected:
 	double match_threshold;							//!< % threshold for matching, if greater then added/deleted instead of modified
 
 	bool print_cmplx;								//!< Print complexity and keyword counts
+	bool print_cyclomatic_cmplx;					//!< Print cyclomatic complexity
 	bool print_csv;									//!< Print CSV report files
 	bool print_ascii;								//!< Print ASCII text report files
 	bool print_legacy;								//!< Print legacy formatted ASCII text report files
 	bool print_unified;								//!< Print all counting files in a single unified file
 	bool clearCaseFile;								//!< Target files are extracted from the ClearCase CM
+	bool followSymLinks;							//!< Unix symbolic links are followed to their linked files/dirs
 
 	map<int, CCodeCounter*> CounterForEachLanguage;	//!< List of code counters for each language
 	map<string, string> LanguageExtensionMap;		//!< List of languages and their extensions

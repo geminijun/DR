@@ -153,8 +153,8 @@ int DiffTool::ReadAllDiffFiles()
 	vector<string> listFileNamesB;
 	if (use_CommandLine)
 	{
-		CUtil::ListAllFiles(dirnameA, listFilesToBeSearched, listFileNamesA);
-		CUtil::ListAllFiles(dirnameB, listFilesToBeSearched, listFileNamesB);
+		CUtil::ListAllFiles(dirnameA, listFilesToBeSearched, listFileNamesA, followSymLinks);
+		CUtil::ListAllFiles(dirnameB, listFilesToBeSearched, listFileNamesB, followSymLinks);
 		BaselineFileName1 = BaselineFileName2 = "";
 	}
 	if (!ReadAllFiles(listFileNamesA, BaselineFileName1, true) || !ReadAllFiles(listFileNamesB, BaselineFileName2, false))
@@ -499,9 +499,9 @@ int DiffTool::CompareFileNames(const string &file1, const string &file2)
 		B[0][1] = j * delta;
 		for (int i = 1; i <= (int)file1.size(); i++)
 		{
-			int ourMatchCost = (file1[i] == file2[j]) ? 0 : mismatchCost;
+			int ourMatchCost = (file1[i-1] == file2[j-1]) ? 0 : mismatchCost;
 			B[i][1] = min(ourMatchCost + B[i-1][0],
-				min(delta + B[i-1][1],delta + B[i][0]));
+				min(delta + B[i-1][1], delta + B[i][0]));
 		}
 		for (int i = 1; i <= (int)file1.size(); i++)
 			B[i][0] = B[i][1];
@@ -766,7 +766,7 @@ void DiffTool::PrintDiffResults()
 	if (print_csv)
 	{
 		string fName = outDir + DIFF_OUTFILE_CSV;
-		outfile_diff_csv.open(fName.c_str(),ofstream::out);
+		outfile_diff_csv.open(fName.c_str(), ofstream::out);
 		if (!outfile_diff_csv.is_open())
 		{
 			string err = "Error: Failed to open diff results output file (";
@@ -780,7 +780,7 @@ void DiffTool::PrintDiffResults()
 		{
 			fName = outDir + "Duplicates-";
 			fName += DIFF_OUTFILE_CSV;
-			dup_outfile_diff_csv.open(fName.c_str(),ofstream::out);
+			dup_outfile_diff_csv.open(fName.c_str(), ofstream::out);
 			if (!dup_outfile_diff_csv.is_open())
 			{
 				string err = "Error: Failed to open duplicates diff results output file (";

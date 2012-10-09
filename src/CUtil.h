@@ -43,8 +43,9 @@ public:
 	static void CountTally(const string &base, StringVector &container, unsigned int &count, int mode, const string &exclude,
 		const string &include1, const string &include2, UIntVector *counter_container = 0, bool casesensitive = true);
 	static string ExtractFilename(const string &filepath);
-	static bool ListAllFiles(string &folder, StringVector &fileExtList, StringVector &fileList);
-	static bool GetFileList(StringVector &fileList, const string &path);
+	static bool ListAllFiles(string &folder, StringVector &fileExtList, StringVector &fileList, bool symLinks);
+	static bool GetFileList(StringVector &fileList, const string &path, bool symLinks);
+	static bool MatchFilename(const string &filename, const string &matchStr);
 	static int MkPath(const string &path);
 	static int PrintFileHeader(ofstream &pout, const string &title, const string &cmd = "");
 	static int PrintFileHeaderLine(ofstream &pout, const string &line);
@@ -52,6 +53,7 @@ public:
 	static void AddError(const string &err, const string &outDir = "");
 	static size_t TruncateLine(size_t length, size_t totalLength, size_t truncate, bool &trunc_flag);
 	static string ClearRedundantSpaces(const string &str);
+	static string ReplaceSmartQuotes(const string &str);
 };
 
 #endif
