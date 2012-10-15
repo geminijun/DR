@@ -565,33 +565,42 @@ int CCJavaCsCounter::ParseFunctionName(string line, string &lastline, stack<stri
 
 	if (idx != string::npos)
 	{
-		// check whether it is at first index, if yes then function name is at above line
-		if (idx == 1 && lastline.find("class ") == string::npos)
-		{
-			functionStack.push(lastline);
-		}
-		else
-		{
-			if (line.find("class ") == string::npos)
-			{
-				string temp_String = line.substr(0, idx);
-				lastline += temp_String;
-				functionStack.push(lastline);
-			}
-		}
+        // check whether it is at first index, if yes then function name is at above line
+        if (idx == 1 
+            && lastline.find(" class ") == string::npos 
+            && lastline.find(" enum ") == string::npos)
+        {
+            if (!lastline.empty()) {
+                functionStack.push(lastline);
+            }
+        }
+        else
+        {
+            if (line.find(" class ") == string::npos
+                && lastline.find(" enum ") == string::npos)
+            {
+                string temp_String = line.substr(0, idx);
+                lastline += temp_String;
+                functionStack.push(lastline);
+            }
+        }
 	}
 	else
 	{
-		if (lastline.find('(') != string::npos)
-		{
-			// add this line in lastline
-			lastline += line;
-		}
-		else if (line.find('(') != string::npos)
-		{
-			// make this line the lastline
-			lastline = line;
-		}
+        if (line[line.length()-1] != ';') {
+            if (lastline.find('(') != string::npos)
+            {
+                // add this line in lastline
+                lastline += line;
+            }
+            else if (line.find('(') != string::npos)
+            {
+                // make this line the lastline
+                lastline = line;
+            }
+        } else {
+//            lastline.erase();
+        }
 	}
 
 	idx = line.find('}');

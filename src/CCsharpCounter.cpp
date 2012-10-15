@@ -175,6 +175,14 @@ CCsharpCounter::CCsharpCounter()
 	cmplx_preproc_list.push_back("region");
 	cmplx_preproc_list.push_back("undef");
 	cmplx_preproc_list.push_back("warning");
+    
+	cmplx_cyclomatic_list.push_back("if");
+	cmplx_cyclomatic_list.push_back("case");
+	cmplx_cyclomatic_list.push_back("do");
+	cmplx_cyclomatic_list.push_back("while");
+	cmplx_cyclomatic_list.push_back("for");
+	cmplx_cyclomatic_list.push_back("catch");
+	cmplx_cyclomatic_list.push_back("?");
 }
 
 /*!
