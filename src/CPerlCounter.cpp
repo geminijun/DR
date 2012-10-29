@@ -124,6 +124,14 @@ CPerlCounter::CPerlCounter()
 	cmplx_preproc_list.push_back("use");
 
 	cmplx_assign_list.push_back("=");
+
+	cmplx_cyclomatic_list.push_back("if");
+	cmplx_cyclomatic_list.push_back("elsif");
+	cmplx_cyclomatic_list.push_back("do");
+	cmplx_cyclomatic_list.push_back("while");
+	cmplx_cyclomatic_list.push_back("for");
+	cmplx_cyclomatic_list.push_back("foreach");
+	cmplx_cyclomatic_list.push_back("?");
 }
 
 /*!
@@ -848,4 +856,38 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 		temp_lines++;
 	if (temp_lines == 0 && phys_data_lines == 0 && phys_exec_lines == 0)
 		phys_exec_lines = 1;
+}
+
+
+/*!
+ * Parses lines for function/method names.
+ *
+ * \param line line to be processed
+ * \param lastline last line processed
+ * \param functionStack stack of functions
+ * \param functionName function name found
+ *
+ * \return 1 if function name is found
+ */
+int CPerlCounter::ParseFunctionName(string line, string &lastline, stack<string> &functionStack, string &functionName)
+{
+	size_t idx;
+	idx = line.find("sub ");
+    cout << "line: " << line << endl;
+	if (idx == 1)
+	{
+		if (functionStack.empty()) {
+            functionName = "main";
+        }
+        else {
+            string tempString = functionStack.top();
+            functionStack.pop();
+            functionName = tempString.substr(idx+4);
+            cout << "functionName: " << functionName << endl;            
+        }
+        functionStack.push(line);
+        return 1;
+	}
+//	else if last line
+	return 0;
 }
