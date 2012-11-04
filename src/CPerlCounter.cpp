@@ -872,22 +872,67 @@ void CPerlCounter::LSLOC(results* result, string line, string lineBak, string &s
 int CPerlCounter::ParseFunctionName(string line, string &lastline, stack<string> &functionStack, string &functionName)
 {
 	size_t idx;
-	idx = line.find("sub ");
-    cout << "line: " << line << endl;
-	if (idx == 1)
+	idx = line.find('{');
+    
+	if (idx != string::npos)
 	{
-		if (functionStack.empty()) {
-            functionName = "main";
+        if (functionStack.empty()) {
+            // check whether it is at first index, if yes then function name is at above line
+            if (idx == 1 && lastline.find("sub ") != string::npos )
+            {
+                functionStack.push(lastline);
+            }
+            else
+            {
+                if (line.find("sub ") != string::npos)
+                {
+                    string temp_String = line.substr(0, idx);
+                    lastline += temp_String;
+                    functionStack.push(lastline);
+                }
+            }
+        } else {
+            string temp_String = line.substr(0, idx);
+            lastline += temp_String;
+            functionStack.push(lastline);            
         }
-        else {
-            string tempString = functionStack.top();
-            functionStack.pop();
-            functionName = tempString.substr(idx+4);
-            cout << "functionName: " << functionName << endl;            
-        }
-        functionStack.push(line);
-        return 1;
 	}
-//	else if last line
+	else
+	{
+        if (line[line.length()-1] != ';') {
+            if (lastline.find('(') != string::npos)
+            {
+                // add this line in lastline
+                lastline += line;
+            }
+            else if (line.find('(') != string::npos)
+            {
+                // make this line the lastline
+                lastline = line;
+            }
+        } else {
+            //            lastline.erase();
+        }
+	}
+    
+    if (functionStack.empty()) {
+        // dealing with some code out of any subroutines, it a "main" code
+        return 2;
+    }
+    
+	idx = line.find('}');
+	if (idx != string::npos)
+	{
+		string tempString = functionStack.top();
+		functionStack.pop();
+		if (functionStack.empty())
+		{
+			idx = tempString.find("sub ");
+			functionName = tempString.substr(idx+4);
+			lastline.erase();
+			return 1;
+		}
+	}
 	return 0;
+
 }

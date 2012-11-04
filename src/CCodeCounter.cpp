@@ -586,7 +586,7 @@ int CCodeCounter::CountComplexity(filemap* fmap, results* result)
 	if (classtype == UNKNOWN || classtype == DATAFILE)
 		return 0;
 	filemap::iterator fit;
-	unsigned int cnt, cyclomatic_cnt = 0;
+	unsigned int cnt, cyclomatic_cnt = 0, main_cyclomatic_cnt = 0;
 	string line, lastline, function_name = "";
 	string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
 	stack<string> function_stack;
@@ -649,15 +649,24 @@ int CCodeCounter::CountComplexity(filemap* fmap, results* result)
 		if (isPrintCyclomatic && cmplx_cyclomatic_list.size() > 0)
 		{
 			CUtil::CountTally(line, cmplx_cyclomatic_list, cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
-
-			if (ParseFunctionName(line, lastline, function_stack, function_name))
+            
+            int ret = ParseFunctionName(line, lastline, function_stack, function_name);
+			if (1 == ret)
 			{
 				result->cmplx_cycfunct_count.insert(make_pair(function_name, cyclomatic_cnt + 1));
 				function_name = "";
 				cyclomatic_cnt = 0;
-			}
+			} else if (2 == ret){
+                // some code doesn't belong to any function
+                main_cyclomatic_cnt += cyclomatic_cnt;
+				cyclomatic_cnt = 0;
+            }
 		}
 	}
+    // done with a file, if has "main" code add it
+    if (main_cyclomatic_cnt != 0) {
+        result->cmplx_cycfunct_count.insert(make_pair("main", main_cyclomatic_cnt + 1));
+    }
 	return 1;
 }
 
