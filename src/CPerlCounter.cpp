@@ -899,20 +899,7 @@ int CPerlCounter::ParseFunctionName(string line, string &lastline, stack<string>
 	}
 	else
 	{
-        if (line[line.length()-1] != ';') {
-            if (lastline.find('(') != string::npos)
-            {
-                // add this line in lastline
-                lastline += line;
-            }
-            else if (line.find('(') != string::npos)
-            {
-                // make this line the lastline
-                lastline = line;
-            }
-        } else {
-            //            lastline.erase();
-        }
+        lastline = line;
 	}
     
     if (functionStack.empty()) {
