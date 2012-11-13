@@ -26,6 +26,7 @@ protected:
 	virtual int LanguageSpecificProcess(filemap* fmap, results* result, filemap* fmapBak = NULL);
 
 	StringVector exclude_start_keywords;		//!< SLOC lines excluded from counts starting with keywords
+    int ParseFunctionName(string line, string &lastline, stack<string> &functionStack, string &functionName);
 };
 
 #endif

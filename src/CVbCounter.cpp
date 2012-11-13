@@ -218,6 +218,14 @@ CVbCounter::CVbCounter()
 	cmplx_preproc_list.push_back("#Region");
 
 	cmplx_assign_list.push_back("=");
+    
+	cmplx_cyclomatic_list.push_back("If");
+	cmplx_cyclomatic_list.push_back("ElseIf");
+	cmplx_cyclomatic_list.push_back("Do");
+	cmplx_cyclomatic_list.push_back("While");
+	cmplx_cyclomatic_list.push_back("For");
+	cmplx_cyclomatic_list.push_back("?");
+	cmplx_cyclomatic_list.push_back("Case");
 }
 
 /*!
@@ -489,4 +497,66 @@ int CVbCounter::LanguageSpecificProcess(filemap* fmap, results* result, filemap*
 			result->exec_lines[PHY]++;
 	}
 	return 1;
+}
+
+/*!
+ * Parses lines for function/method names.
+ *
+ * \param line line to be processed
+ * \param lastline last line processed
+ * \param functionStack stack of functions
+ * \param functionName function name found
+ *
+ * \return 1 if function name is found
+ */
+int CVbCounter::ParseFunctionName(string line, string &lastline, stack<string> &functionStack, string &functionName)
+{
+	size_t idx;
+	idx = line.find("Sub ");    
+	if (idx != string::npos)
+	{
+		string tempString = line.substr(idx + 4);
+        functionStack.push(tempString);
+	}
+	else
+	{
+        idx = line.find("Function ");
+        if (idx != string::npos)
+        {
+            string tempString = line.substr(idx + 9);
+            functionStack.push(tempString);
+        }
+	}
+    
+    if (functionStack.empty()) {
+        // dealing with some code out of any subroutines, it a "main" code
+        return 2;
+    }
+    
+	idx = line.find("End Sub");
+	if (idx != string::npos)
+	{
+		string tempString = functionStack.top();
+		functionStack.pop();
+		if (functionStack.empty())
+		{
+			idx = tempString.find("(");
+			functionName = tempString.substr(0, idx);
+			return 1;
+		}
+	} else {
+        idx = line.find("End Function");
+        if (idx != string::npos)
+        {
+            string tempString = functionStack.top();
+            functionStack.pop();
+            if (functionStack.empty())
+            {
+                idx = tempString.find("(");
+                functionName = tempString.substr(0, idx);
+                return 1;
+            }
+        }
+    }
+	return 0;    
 }
