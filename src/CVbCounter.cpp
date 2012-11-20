@@ -225,7 +225,9 @@ CVbCounter::CVbCounter()
 	cmplx_cyclomatic_list.push_back("While");
 	cmplx_cyclomatic_list.push_back("For");
 	cmplx_cyclomatic_list.push_back("?");
+	//cmplx_cyclomatic_list.push_back("Select Case");
 	cmplx_cyclomatic_list.push_back("Case");
+	
 }
 
 /*!
@@ -559,4 +561,108 @@ int CVbCounter::ParseFunctionName(string line, string &lastline, stack<string> &
         }
     }
 	return 0;    
+}
+
+
+
+/*!
+* Counts file language complexity based on specified language keywords/characters.
+*
+* \param fmap list of processed file lines
+* \param result counter results
+*
+* \return method status
+*/
+int CVbCounter::CountComplexity(filemap* fmap, results* result)
+{
+  StringVector  select_case_cmplx_cyclomatic_list;	//!< For excluding Select Case from count of Case in Cyclomatic Complexity Count.
+  select_case_cmplx_cyclomatic_list.push_back( "Select case" );
+  
+  if (classtype == UNKNOWN || classtype == DATAFILE)
+	  return 0;
+  filemap::iterator fit;
+  unsigned int cnt, cyclomatic_cnt = 0, main_cyclomatic_cnt = 0, select_case_cyclomatic_cnt = 0;
+  string line, lastline, function_name = "";
+  string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
+  stack<string> function_stack;
+
+  for (fit = fmap->begin(); fit != fmap->end(); fit++)
+  {
+    line = fit->line;
+
+    if (CUtil::CheckBlank(line))
+	    continue;
+
+    line = " " + line;
+
+    // mathematical functions
+    cnt = 0;
+    CUtil::CountTally(line, math_func_list, cnt, 1, exclude, "", "", &result->math_func_count, casesensitive);
+    result->cmplx_math_lines += cnt;
+
+    // trigonometric functions
+    cnt = 0;
+    CUtil::CountTally(line, trig_func_list, cnt, 1, exclude, "", "", &result->trig_func_count, casesensitive);
+    result->cmplx_trig_lines += cnt;
+
+    // logarithmic functions
+    cnt = 0;
+    CUtil::CountTally(line, log_func_list, cnt, 1, exclude, "", "", &result->log_func_count, casesensitive);
+    result->cmplx_logarithm_lines += cnt;
+
+    // calculations
+    cnt = 0;
+    CUtil::CountTally(line, cmplx_calc_list, cnt, 1, exclude, "", "", &result->cmplx_calc_count, casesensitive);
+    result->cmplx_calc_lines += cnt;
+
+    // conditionals
+    cnt = 0;
+    CUtil::CountTally(line, cmplx_cond_list, cnt, 1, exclude, "", "", &result->cmplx_cond_count, casesensitive);
+    result->cmplx_cond_lines += cnt;
+
+    // logical operators
+    cnt = 0;
+    CUtil::CountTally(line, cmplx_logic_list, cnt, 1, exclude, "", "", &result->cmplx_logic_count, casesensitive);
+    result->cmplx_logic_lines += cnt;
+
+    // preprocessor directives
+    cnt = 0;
+    CUtil::CountTally(line, cmplx_preproc_list, cnt, 1, exclude, "", "", &result->cmplx_preproc_count, casesensitive);
+    result->cmplx_preproc_lines += cnt;
+
+    // assignments
+    cnt = 0;
+    CUtil::CountTally(line, cmplx_assign_list, cnt, 1, exclude, "", "", &result->cmplx_assign_count, casesensitive);
+    result->cmplx_assign_lines += cnt;
+
+    // pointers
+    cnt = 0;
+    CUtil::CountTally(line, cmplx_pointer_list, cnt, 1, exclude, "", "", &result->cmplx_pointer_count, casesensitive);
+    result->cmplx_pointer_lines += cnt;
+    
+    // cyclomatic complexity (if requested)
+    if (isPrintCyclomatic && cmplx_cyclomatic_list.size() > 0)
+    {
+      CUtil::CountTally(line, cmplx_cyclomatic_list, cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
+      //See if there is Select Case
+      CUtil::CountTally(line, select_case_cmplx_cyclomatic_list, select_case_cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
+      
+      int ret = ParseFunctionName(line, lastline, function_stack, function_name);
+      if (1 == ret)
+      {
+	result->cmplx_cycfunct_count.insert(make_pair(function_name, cyclomatic_cnt - select_case_cyclomatic_cnt + 1));
+	function_name = "";
+	cyclomatic_cnt = 0;
+      } else if (2 == ret){
+	// some code doesn't belong to any function
+	main_cyclomatic_cnt += cyclomatic_cnt;
+	cyclomatic_cnt = 0;
+      }
+    }
+  }
+  // done with a file, if has "main" code add it
+  if (main_cyclomatic_cnt != 0) {
+  result->cmplx_cycfunct_count.insert(make_pair("main", main_cyclomatic_cnt + 1));
+  }
+  return 1;
 }

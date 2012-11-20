@@ -22,11 +22,12 @@ public:
 	CVbCounter();
 
 protected:
-	virtual int CountDirectiveSLOC(filemap* fmap, results* result, filemap* fmapBak = NULL);
-	virtual int LanguageSpecificProcess(filemap* fmap, results* result, filemap* fmapBak = NULL);
+  virtual int CountDirectiveSLOC(filemap* fmap, results* result, filemap* fmapBak = NULL);
+  virtual int LanguageSpecificProcess(filemap* fmap, results* result, filemap* fmapBak = NULL);
+  virtual int CountComplexity(filemap* fmap, results* result);
 
-	StringVector exclude_start_keywords;		//!< SLOC lines excluded from counts starting with keywords
-    int ParseFunctionName(string line, string &lastline, stack<string> &functionStack, string &functionName);
+  StringVector exclude_start_keywords;		//!< SLOC lines excluded from counts starting with keywords
+  int ParseFunctionName(string line, string &lastline, stack<string> &functionStack, string &functionName);
 };
 
 #endif
