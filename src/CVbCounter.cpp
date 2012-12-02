@@ -225,8 +225,8 @@ CVbCounter::CVbCounter()
 	cmplx_cyclomatic_list.push_back("While");
 	cmplx_cyclomatic_list.push_back("For");
 	cmplx_cyclomatic_list.push_back("?");
-	//cmplx_cyclomatic_list.push_back("Select Case");
-	cmplx_cyclomatic_list.push_back("Case");
+	cmplx_cyclomatic_list.push_back("Select Case");
+	//cmplx_cyclomatic_list.push_back("Case");
 	
 }
 
@@ -575,13 +575,15 @@ int CVbCounter::ParseFunctionName(string line, string &lastline, stack<string> &
 */
 int CVbCounter::CountComplexity(filemap* fmap, results* result)
 {
-  StringVector  select_case_cmplx_cyclomatic_list;	//!< For excluding Select Case from count of Case in Cyclomatic Complexity Count.
-  select_case_cmplx_cyclomatic_list.push_back( "Select case" );
+  StringVector  ignore_cmplx_cyclomatic_list;	//!< For excluding Select Case from count of Case in Cyclomatic Complexity Count.
+  //ignore_cmplx_cyclomatic_list.push_back( "End select" );
+  ignore_cmplx_cyclomatic_list.push_back( "End if" );
+  ignore_cmplx_cyclomatic_list.push_back( "End while" );
   
   if (classtype == UNKNOWN || classtype == DATAFILE)
 	  return 0;
   filemap::iterator fit;
-  unsigned int cnt, cyclomatic_cnt = 0, main_cyclomatic_cnt = 0, select_case_cyclomatic_cnt = 0;
+  unsigned int cnt, cyclomatic_cnt = 0, main_cyclomatic_cnt = 0, ignore_cyclomatic_cnt = 0;
   string line, lastline, function_name = "";
   string exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$";
   stack<string> function_stack;
@@ -645,12 +647,12 @@ int CVbCounter::CountComplexity(filemap* fmap, results* result)
     {
       CUtil::CountTally(line, cmplx_cyclomatic_list, cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
       //See if there is Select Case
-      CUtil::CountTally(line, select_case_cmplx_cyclomatic_list, select_case_cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
+      CUtil::CountTally(line, ignore_cmplx_cyclomatic_list, ignore_cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
       
       int ret = ParseFunctionName(line, lastline, function_stack, function_name);
       if (1 == ret)
       {
-	result->cmplx_cycfunct_count.insert(make_pair(function_name, cyclomatic_cnt - select_case_cyclomatic_cnt + 1));
+	result->cmplx_cycfunct_count.insert(make_pair(function_name, cyclomatic_cnt - ignore_cyclomatic_cnt + 1));
 	function_name = "";
 	cyclomatic_cnt = 0;
       } else if (2 == ret){
