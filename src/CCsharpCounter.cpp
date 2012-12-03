@@ -178,7 +178,7 @@ CCsharpCounter::CCsharpCounter()
     
 	cmplx_cyclomatic_list.push_back("if");
 	cmplx_cyclomatic_list.push_back("case");
-	cmplx_cyclomatic_list.push_back("do");
+//	cmplx_cyclomatic_list.push_back("do");
 	cmplx_cyclomatic_list.push_back("while");
 	cmplx_cyclomatic_list.push_back("for");
 	cmplx_cyclomatic_list.push_back("foreach");
