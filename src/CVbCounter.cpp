@@ -221,13 +221,15 @@ CVbCounter::CVbCounter()
     
 	cmplx_cyclomatic_list.push_back("If");
 	cmplx_cyclomatic_list.push_back("ElseIf");
-	cmplx_cyclomatic_list.push_back("Do");
+	//cmplx_cyclomatic_list.push_back("Do");
 	cmplx_cyclomatic_list.push_back("While");
+	cmplx_cyclomatic_list.push_back("Until");
 	cmplx_cyclomatic_list.push_back("For");
 	cmplx_cyclomatic_list.push_back("?");
-	cmplx_cyclomatic_list.push_back("Select Case");
-	//cmplx_cyclomatic_list.push_back("Case");
-	
+	//cmplx_cyclomatic_list.push_back("Select Case");
+	cmplx_cyclomatic_list.push_back("Catch");
+	cmplx_cyclomatic_list.push_back("Catch When");
+	cmplx_cyclomatic_list.push_back("Case");
 }
 
 /*!
@@ -576,7 +578,7 @@ int CVbCounter::ParseFunctionName(string line, string &lastline, stack<string> &
 int CVbCounter::CountComplexity(filemap* fmap, results* result)
 {
   StringVector  ignore_cmplx_cyclomatic_list;	//!< For excluding Select Case from count of Case in Cyclomatic Complexity Count.
-  //ignore_cmplx_cyclomatic_list.push_back( "End select" );
+  ignore_cmplx_cyclomatic_list.push_back( "Select case" );
   ignore_cmplx_cyclomatic_list.push_back( "End if" );
   ignore_cmplx_cyclomatic_list.push_back( "End while" );
   
@@ -646,7 +648,7 @@ int CVbCounter::CountComplexity(filemap* fmap, results* result)
     if (isPrintCyclomatic && cmplx_cyclomatic_list.size() > 0)
     {
       CUtil::CountTally(line, cmplx_cyclomatic_list, cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
-      //See if there is Select Case
+      //See if we have to exlude anything
       CUtil::CountTally(line, ignore_cmplx_cyclomatic_list, ignore_cyclomatic_cnt, 1, exclude, "", "", 0, casesensitive);
       
       int ret = ParseFunctionName(line, lastline, function_stack, function_name);
