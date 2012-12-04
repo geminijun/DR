@@ -228,7 +228,7 @@ CVbCounter::CVbCounter()
 	cmplx_cyclomatic_list.push_back("?");
 	//cmplx_cyclomatic_list.push_back("Select Case");
 	cmplx_cyclomatic_list.push_back("Catch");
-	cmplx_cyclomatic_list.push_back("Catch When");
+	cmplx_cyclomatic_list.push_back("When");
 	cmplx_cyclomatic_list.push_back("Case");
 }
 
