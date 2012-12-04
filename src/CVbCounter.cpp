@@ -579,6 +579,7 @@ int CVbCounter::CountComplexity(filemap* fmap, results* result)
 {
   StringVector  ignore_cmplx_cyclomatic_list;	//!< For excluding Select Case from count of Case in Cyclomatic Complexity Count.
   ignore_cmplx_cyclomatic_list.push_back( "Select case" );
+  ignore_cmplx_cyclomatic_list.push_back( "Case Else" );
   ignore_cmplx_cyclomatic_list.push_back( "End if" );
   ignore_cmplx_cyclomatic_list.push_back( "End while" );
   
